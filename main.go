@@ -11,32 +11,26 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type book struct {
+type Book struct {
 	ID     string  `storm:"id"`
 	Isbn   string  `storm:"unique"`
 	Title  string  `storm:"index"`
-	Author *author `storm:"inline"`
+	Author *Author `storm:"inline"`
 }
 
-type author struct {
+type Author struct {
 	Firstname string `storm:"index"`
 	Lastname  string `storm:"index"`
 }
 
-var db storm.DB
-
-func openDB() error {
-	db, err := storm.Open("books.db")
-	return err
-}
-
 func getBooks(w http.ResponseWriter, r *http.Request) {
-	if err := openDB(); err != nil {
+	db, err := storm.Open("books.db")
+	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	defer db.Close()
-	var books []book
+	var books []Book
 	if err := db.All(&books); err != nil {
 		log.Fatal(err)
 		return
@@ -47,13 +41,14 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
-	if err := openDB(); err != nil {
+	db, err := storm.Open("books.db")
+	if err != nil {
 		log.Fatal(err)
 		return
 	}
 	defer db.Close()
 	w.Header().Set("Content-Type", "application/json")
-	var book book
+	var book Book
 	_ = json.NewDecoder(r.Body).Decode(&book)
 	book.ID = uuid.Must(uuid.NewV4()).String()
 	if err := db.Save(&book); err != nil {
@@ -65,16 +60,30 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func deleteBook(w http.ResponseWriter, r *http.Request) {
+	db, err := storm.Open("books.db")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer db.Close()
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-
-	err := db.DeleteStruct(&user)
-	for index, item := range books {
-		if item.ID == params["id"] {
-			books = append(books[:index], books[index+1:]...)
-			break
-		}
-
+	var book Book
+	if err := db.One("ID", params, &book); err != nil {
+		e := map[string]string{"error": "book not found"}
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+	if err := db.DeleteStruct(&book); err != nil {
+		e := map[string]string{"error": "book does not want to be removed"}
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+	var books []Book
+	if err := db.All(&books); err != nil {
+		e := map[string]string{"error": "can't fetch remaining books at this time"}
+		json.NewEncoder(w).Encode(e)
+		return
 	}
 	json.NewEncoder(w).Encode(books)
 }
