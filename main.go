@@ -106,7 +106,17 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(e)
 		return
 	}
-	json.NewEncoder(w).Encode(&Book{})
+	// loop over keys and update book, then use update
+
+	// if err := db.Update(&Book{
+	// 	"ID": params["id"],
+
+	// 	}); err != nil {
+	// 	e := map[string]string{"error": "book not found"}
+	// 	json.NewEncoder(w).Encode(e)
+	// 	return
+	// }
+	// json.NewEncoder(w).Encode(&Book{})
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
