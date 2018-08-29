@@ -8,7 +8,12 @@ type book struct {
 	ID     string  `json:"id"`
 	Isbn   string  `json:"isbn"`
 	Title  string  `json:"title"`
-	Author *Author `json:"author"`
+	author *author `json:"author"`
+}
+
+type author struct {
+	Firstname string `json:"firstname"`
+	Lastname  string `json:"lastname"`
 }
 
 func main() {
