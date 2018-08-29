@@ -23,9 +23,15 @@ type author struct {
 	Lastname  string `storm:"index"`
 }
 
-func getBooks(w http.ResponseWriter, r *http.Request) {
+var db storm.DB
+
+func openDB() error {
 	db, err := storm.Open("books.db")
-	if err != nil {
+	return err
+}
+
+func getBooks(w http.ResponseWriter, r *http.Request) {
+	if err := openDB(); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -41,8 +47,7 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
-	db, err := storm.Open("books.db")
-	if err != nil {
+	if err := openDB(); err != nil {
 		log.Fatal(err)
 		return
 	}
@@ -59,9 +64,25 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+func deleteBook(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+
+	err := db.DeleteStruct(&user)
+	for index, item := range books {
+		if item.ID == params["id"] {
+			books = append(books[:index], books[index+1:]...)
+			break
+		}
+
+	}
+	json.NewEncoder(w).Encode(books)
+}
+
 func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/books", getBooks).Methods("GET")
 	r.HandleFunc("/api/addbook", addBook).Methods("POST")
+	r.HandleFunc("/api/books/{id}", deleteBook).Methods("DELETE")
 
 }
