@@ -71,7 +71,7 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
 	var book Book
-	if err := db.One("ID", params, &book); err != nil {
+	if err := db.One("ID", params["id"], &book); err != nil {
 		e := map[string]string{"error": "book not found"}
 		json.NewEncoder(w).Encode(e)
 		return
@@ -88,6 +88,43 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	json.NewEncoder(w).Encode(books)
+}
+
+func updateBook(w http.ResponseWriter, r *http.Request) {
+	db, err := storm.Open("books.db")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer db.Close()
+
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r)
+	var book []Book
+	if err := db.One("ID", params["id"], &book); err != nil {
+		e := map[string]string{"error": "book not found"}
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+	json.NewEncoder(w).Encode(&Book{})
+}
+
+func getBook(w http.ResponseWriter, r *http.Request) {
+	db, err := storm.Open("books.db")
+	if err != nil {
+		log.Fatal(err)
+		return
+	}
+	defer db.Close()
+	w.Header().Set("Content-Type", "application/json")
+	params := mux.Vars(r) // Get params
+	var book []Book
+	if err := db.One("ID", params["id"], &book); err != nil {
+		e := map[string]string{"error": "book not found"}
+		json.NewEncoder(w).Encode(e)
+		return
+	}
+	json.NewEncoder(w).Encode(&Book{})
 }
 
 func main() {
