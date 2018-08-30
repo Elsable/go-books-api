@@ -71,6 +71,7 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
+		http.Error(w, "Server error", 500)
 		log.Panic(err)
 		return
 	}
@@ -100,6 +101,7 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 func updateBook(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
+		http.Error(w, "Server error", 500)
 		log.Panic(err)
 		return
 	}
@@ -135,13 +137,13 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r) // Get params
-	var book []Book
+	var book Book
 	if err := db.One("ID", params["id"], &book); err != nil {
 		e := map[string]string{"error": "book not found"}
 		json.NewEncoder(w).Encode(e)
 		return
 	}
-	json.NewEncoder(w).Encode(&Book{})
+	json.NewEncoder(w).Encode(book)
 }
 
 func main() {
