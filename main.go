@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -27,13 +26,13 @@ type Author struct {
 func getBooks(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 		return
 	}
 	defer db.Close()
 	var books []Book
 	if err := db.All(&books); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
@@ -42,21 +41,29 @@ func getBooks(w http.ResponseWriter, r *http.Request) {
 }
 
 func addBook(w http.ResponseWriter, r *http.Request) {
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	var book Book
+	book.ID = uuid.Must(uuid.NewV4()).String()
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	db, err := storm.Open("books.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
+		http.Error(w, "Server error", 500)
 		return
 	}
 	defer db.Close()
-	w.Header().Set("Content-Type", "application/json")
-	var book Book
-	_ = json.NewDecoder(r.Body).Decode(&book)
-	fmt.Println(book)
-	book.ID = uuid.Must(uuid.NewV4()).String()
 	if err := db.Save(&book); err != nil {
-		log.Fatal(err)
+		log.Panic(err)
+		http.Error(w, "already exists", 400)
 		return
 	}
+	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(book)
 	return
 }
@@ -64,7 +71,7 @@ func addBook(w http.ResponseWriter, r *http.Request) {
 func deleteBook(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 		return
 	}
 	defer db.Close()
@@ -93,7 +100,7 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 func updateBook(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 		return
 	}
 	defer db.Close()
@@ -122,7 +129,7 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 func getBook(w http.ResponseWriter, r *http.Request) {
 	db, err := storm.Open("books.db")
 	if err != nil {
-		log.Fatal(err)
+		log.Panic(err)
 		return
 	}
 	defer db.Close()
@@ -138,11 +145,11 @@ func getBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	r := mux.NewRouter()
+	r := mux.NewRouter().StrictSlash(true)
 	r.HandleFunc("/api/books", getBooks).Methods("GET")
 	r.HandleFunc("/api/books", addBook).Methods("POST")
 	r.HandleFunc("/api/books/{id}", getBook).Methods("GET")
 	r.HandleFunc("/api/books/{id}", updateBook).Methods("PUT")
 	r.HandleFunc("/api/books/{id}", deleteBook).Methods("DELETE")
-	log.Fatal(http.ListenAndServe(":8000", r))
+	log.Panic(http.ListenAndServe(":8000", r))
 }
