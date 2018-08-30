@@ -99,6 +99,15 @@ func deleteBook(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateBook(w http.ResponseWriter, r *http.Request) {
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	var book Book
+	if err := json.NewDecoder(r.Body).Decode(&book); err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
 	db, err := storm.Open("books.db")
 	if err != nil {
 		http.Error(w, "Server error", 500)
@@ -107,25 +116,19 @@ func updateBook(w http.ResponseWriter, r *http.Request) {
 	}
 	defer db.Close()
 
-	w.Header().Set("Content-Type", "application/json")
 	params := mux.Vars(r)
-	var book []Book
-	if err := db.One("ID", params["id"], &book); err != nil {
+	if err := db.Update(&Book{
+		ID:     params["id"],
+		Title:  book.Title,
+		Isbn:   book.Isbn,
+		Author: book.Author,
+	}); err != nil {
 		e := map[string]string{"error": "book not found"}
 		json.NewEncoder(w).Encode(e)
 		return
 	}
-	// loop over keys and update book, then use update
-
-	// if err := db.Update(&Book{
-	// 	"ID": params["id"],
-
-	// 	}); err != nil {
-	// 	e := map[string]string{"error": "book not found"}
-	// 	json.NewEncoder(w).Encode(e)
-	// 	return
-	// }
-	// json.NewEncoder(w).Encode(&Book{})
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(book)
 }
 
 func getBook(w http.ResponseWriter, r *http.Request) {
